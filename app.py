@@ -45,23 +45,22 @@ camera_type = st.radio(
 
 # Set default values based on the selected camera type
 if camera_type == "Wide-Angle Camera":
-    f_x_default, f_y_default = 24, 24
+    focal_length_default = 24
     sensor_width_default, sensor_height_default = 17.3, 13.0
 elif camera_type == "Telephoto Camera":
-    f_x_default, f_y_default = 162, 162
+    focal_length_default = 162
     sensor_width_default, sensor_height_default = 6.4, 4.8
 else:
-    f_x_default, f_y_default = 50, 50
+    focal_length_default = 50
     sensor_width_default, sensor_height_default = 15, 15
     
 
 st.subheader("Camera Parameters")
 col1, col2 = st.columns(2)
 with col1:
-    f_x = st.number_input("Focal length (f_x) in mm", value=f_x_default)
-    sensor_width = st.number_input("Sensor width (mm)", value=sensor_width_default)
+    focal_length = st.number_input("Focal length in mm", value=focal_length_default)
 with col2:
-    f_y = st.number_input("Focal length (f_y) in mm", value=f_y_default)
+    sensor_width = st.number_input("Sensor width (mm)", value=sensor_width_default)
     sensor_height = st.number_input("Sensor height (mm)", value=sensor_height_default)
 
 sensor_size = (sensor_width, sensor_height)
@@ -103,7 +102,7 @@ st.markdown(
 # button to run the computation
 if st.button("Compute object GPS coordinates"):
     # STEP 1: Compute camera intrinsics and the tilt matrix
-    K = compute_K((f_x, f_y), sensor_size, (W, H))
+    K = compute_K(focal_length, sensor_size, (W, H))
     R_tilt = compute_camera_rotation(alpha)
     
     # STEP 2: Compute the object coordinates in the world
@@ -113,7 +112,7 @@ if st.button("Compute object GPS coordinates"):
     object_lat, object_lon = compute_object_gps_coords(object_world_coords, (lat0, lon0))
     
     # display the results
-    st.success(f"Object GPS Coordinates: Latitude = {object_lat}, Longitude = {object_lon}")
+    st.success(f"Object GPS Coordinates (latitude, longitude): {object_lat}, {object_lon}")
     
     # option to save the result as a CSV file
     coords_data = pd.DataFrame({
