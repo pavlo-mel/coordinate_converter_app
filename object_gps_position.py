@@ -9,15 +9,15 @@ def compute_K(focal_length, sensor_size, image_size):
     where f_x and f_y are the focal lengths in pixels for the x and y directions,
     and c_x and c_y is the principal point coordinates (in the image).
     
-    :param focal_length: tuple (f_x, f_y), the focal length of the camera (mm)
+    :param focal_length: float, the focal length of the camera (mm)
     :param sensor_size: tuple (width, height), the sensor size (mm)
     :param image_size: tuple (width, height), the image size in pixels
     
     :return: a 3x3 np.array K
     '''
     # f_x is the focal length in pixels along the x-axis
-    f_x = (focal_length[0] / sensor_size[0]) * image_size[0]    
-    f_y = (focal_length[1] / sensor_size[1]) * image_size[1]
+    f_x = (focal_length / sensor_size[0]) * image_size[0]    
+    f_y = (focal_length / sensor_size[1]) * image_size[1]
 
     # assume the principal point is in the middle of the image:
     c_x = image_size[0] // 2
@@ -61,13 +61,13 @@ def compute_object_world_coords(object_image_coords, K, R_tilt, camera_altitude)
     Explanation:
     Using the following expression based on projective geometry:
                 [x_im, y_im, 1] ~ P [x, y, z, 1], 
-    where P = K R_tilt [I 0] (3x4) with I being a 3x3 identity matrix 
+    where P = K R_tilt [I 0] (3x4) is the camera matrix with I being a 3x3 identity matrix 
     and K the camera intrinsics matrix, we obtain:
                 [x_im, y_im, 1] ~ K R_tilt [x, y, z],
                 R_tilt^{-1} K^{-1} [x_im, y_im, 1] ~ [x, y, z].
 
-    Since we assumed the camera position is the origin and that the object lies on the ground,
-    the last coordinated z is the altitude, i.e., z = camera_altitude.
+    Since we assume the camera position is the origin and that the object lies on the ground,
+    the last coordinate z is the altitude, i.e., z = camera_altitude.
     Thus, after computing 
                 b := R_tilt.T K^{-1} [x_im, y_im, 1], 
     we normalize B s.t. b[-1] == camera_altitude, and find the world coordinates of the object:
@@ -99,13 +99,13 @@ def compute_object_gps_coords(object_world_coords, camera_gps):
     '''
     # since the camera is the origin, the ground distance between the object and the camera 
     # is simply the length of the (x, y) coordinate-vector of the object:
-    ground_dist = np.sqrt( np.sum(object_world_coords[:2]**2) ) 
+    ground_dist = np.sqrt( np.sum(object_world_coords[:2]**2) ) # in [m]
     
-    lat0, lon0 = camera_gps
+    lat1, lon1 = camera_gps
     x_obj, y_obj, _ = object_world_coords
     
-    lat1_rad = np.radians(lat0)
-    lon1_rad = np.radians(lon0)
+    lat1_rad = np.radians(lat1)
+    lon1_rad = np.radians(lon1)
   
     R = 6371000.0 # Earth radius in meters
 
@@ -120,8 +120,8 @@ def compute_object_gps_coords(object_world_coords, camera_gps):
     lon2_rad = lon1_rad + np.arctan2(np.sin(bearing_rad) * np.sin(ground_dist / R) * np.cos(lat1_rad),
                                      np.cos(ground_dist / R) - np.sin(lat1_rad) * np.sin(lat2_rad))
     
-    lat1 = np.degrees(lat1_rad)
-    lon1 = np.degrees(lon1_rad)
+    lat1 = np.degrees(lat2_rad)
+    lon1 = np.degrees(lon2_rad)
 
     return lat1, lon1
 
@@ -130,10 +130,10 @@ def compute_object_gps_coords(object_world_coords, camera_gps):
 def main():
     # for example:
     # focal length
-    f_x, f_y = 24, 24
+    focal_length_default = 24
     sensor_size = (17.3, 13.) # sensor (width, height) in mm
     # or:
-    # f_x, f_y = 162, 162
+    # focal_length_default = 162
     # sensor_size = (6.4, 4.8)
 
     # camera setup:
@@ -148,12 +148,12 @@ def main():
     H = 2160  # image height in pixels
     
     # pixel coordinates of the detected object
-    x_im = 2000  # Pixel x-coordinate
-    y_im = 1000  # Pixel y-coordinate
+    x_im = 3000  # Pixel x-coordinate
+    y_im = 0  # Pixel y-coordinate
 
 
     # STEP 1: compute camera intrinsics and the tilt matrix
-    K = compute_K((f_x, f_y), sensor_size, (W, H))
+    K = compute_K(focal_length_default, sensor_size, (W, H))
     R_tilt = compute_camera_rotation(alpha)
 
     print(f"\nCamera intrinsics:\n{K}\n")
@@ -168,7 +168,7 @@ def main():
 
     # STEP 3: compute the GPS coordinates of the object
     object_lat, object_lon = compute_object_gps_coords(object_world_coords, (lat0, lon0))
-    print(f"\nObject GPS Coordinates: Latitude = {object_lat:.3f}, Longitude = {object_lon:.3f}")
+    print(f"\nObject GPS Coordinates: Latitude = {object_lat:.6f}, Longitude = {object_lon:.6f}")
 
 
 if __name__ == "__main__":
